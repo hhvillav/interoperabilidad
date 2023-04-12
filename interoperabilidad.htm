@@ -5,7 +5,10 @@
     <meta http-equiv="X-UA-Compatible" content="ie=edge" />
     <title>Conversión de formatos de archivo</title>
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
-<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.15.3/xlsx.full.min.js"></script>
+  <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.15.3/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.5.0/jszip.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/docxtemplater/3.17.1/docxtemplater.min.js"></script>
+
   </head>
 <body>
     <div class="container">
@@ -52,22 +55,59 @@
           "xls":{
             "name":"Excel",
             "extension":".xls,.xlsx",
-            "visible":false
+            "visible":false,
+            convertTo: function(destinationType, data){
+              let fileContent;
+            var workbook = XLSX.read(data, {
+                type: "binary"
+              });
+              if(destinationType === "json"){
+                workbook.SheetNames.forEach(sheet => {
+                let rowObject = XLSX.utils.sheet_to_row_object_array(
+                  workbook.Sheets[sheet]);
+                fileContent = JSON.stringify(rowObject);
+                });
+              }
+              else if(destinationType === "csv"){
+                var sheetName = workbook.SheetNames[0];
+                var sheet = workbook.Sheets[sheetName];
+                fileContent = XLSX.utils.sheet_to_csv(sheet);
+              }
+              return fileContent;
+
+
+            }
           },
           "word":{
             "name":"Word",
             "extension":".doc,.docx",
-            "visible":false
+            "visible":false,
+            convertTo: function(destinationType, source){
+              JSZip.loadAsync(source).then(function(zip) {
+              const doc = new docxtemplater().loadZip(zip);
+
+              const data = doc.getFullText();
+              const fileContent = JSON.stringify(data);
+              return fileContent;
+              }
+              );
+            }
           },
           "json":{
             "name":"JSON",
             "extension":".json",
-            "visible":true
+            "visible":true,
+            convertTo: function(target, data){
+              
+            }
           },
           "csv":{
             "name":"CSV",
             "extension":".csv",
-            "visible":true
+            "visible":true,
+            convertTo: function(target, data){
+              
+            }
           },
                     
         }
@@ -92,7 +132,8 @@
 
               let sourceType = types[getSourceFileType()];
               let destinationType = types[getDestinationFileType()];
-              content = xslTojson(data);
+              
+              content = sourceType.convertTo(getDestinationFileType(), data);
               document.getElementById("jsonData").innerHTML = (destinationType.visible)?
                 content:"";
               
@@ -109,16 +150,6 @@
         }
 
         function xslTojson(data){
-          let jsonObject;
-          var workbook = XLSX.read(data, {
-                type: "binary"
-              });
-              workbook.SheetNames.forEach(sheet => {
-                let rowObject = XLSX.utils.sheet_to_row_object_array(
-                  workbook.Sheets[sheet]);
-                jsonObject = JSON.stringify(rowObject);
-              });
-              return jsonObject;
         }
          
 
