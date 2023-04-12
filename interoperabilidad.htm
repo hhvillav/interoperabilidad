@@ -1,0 +1,148 @@
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+    <title>Conversión de formatos de archivo</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
+<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.15.3/xlsx.full.min.js"></script>
+  </head>
+<body>
+    <div class="container">
+        <h4>Conversión entre distintos formatos de archivo</h4>
+        <div class="form-group">
+          <label for="sourceFileType">Tipo de archivo fuente:</label>
+          <select class="form-control" id="sourceFileType" name="sourceFileType">
+            <option value="xls">Excel</option>
+            <option value="word">Word</option>
+            <option value="json">JSON</option>
+            <option value="csv">CSV</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="destinationFileType">Tipo de archivo destino:</label>
+          <select class="form-control" id="destinationFileType" name="destinationFileType">
+            <option value="xls">Excel</option>
+            <option value="word">Word</option>
+            <option value="json">JSON</option>
+            <option value="csv">CSV</option>
+          </select>
+        </div>
+        <div class="panel panel-primary">
+            <div class="panel-heading" id="divTitulo"></div>
+            <div class="panel-body">
+                <!-- Input type file to upload excel file -->
+                <input type="file" id="fileUpload" accept=".xls,.xlsx" /><br />
+                <button type="button" id="upload">Convert</button>
+
+              <div style="margin-top:10px;">
+                <pre id="jsonData"></pre>
+                <button type="button" id="download">Descargar archivo</button>
+              </div>
+
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        var sourceType;
+        var destinationType;
+        var selectedFile;
+        var types={
+          "xls":{
+            "name":"Excel",
+            "extension":".xls,.xlsx",
+            "visible":false
+          },
+          "word":{
+            "name":"Word",
+            "extension":".doc,.docx",
+            "visible":false
+          },
+          "json":{
+            "name":"JSON",
+            "extension":".json",
+            "visible":true
+          },
+          "csv":{
+            "name":"CSV",
+            "extension":".csv",
+            "visible":true
+          },
+                    
+        }
+        document
+          .getElementById("fileUpload")
+          .addEventListener("change", function(event) {
+            selectedFile = event.target.files[0];
+          });
+        document
+          .getElementById("upload")
+          .addEventListener("click", processFile);
+        document
+          .getElementById("sourceFileType").addEventListener("change", updateElements);
+        document
+          .getElementById("destinationFileType").addEventListener("change", updateElements);
+
+        function processFile() {
+          if (selectedFile) {
+            var fileReader = new FileReader();
+            fileReader.onload = function(event) {
+              var data = event.target.result;
+
+              let sourceType = types[getSourceFileType()];
+              let destinationType = types[getDestinationFileType()];
+              content = xslTojson(data);
+              document.getElementById("jsonData").innerHTML = (destinationType.visible)?
+                content:"";
+              
+
+              var fileName = 'data.' + destinationType.extension.slice(1);
+                document
+                  .getElementById('download').addEventListener('click', function() {
+                      download(content, fileName, 'text/plain');});
+                console.log(content);
+
+            };
+            fileReader.readAsBinaryString(selectedFile);
+          }
+        }
+
+        function xslTojson(data){
+          let jsonObject;
+          var workbook = XLSX.read(data, {
+                type: "binary"
+              });
+              workbook.SheetNames.forEach(sheet => {
+                let rowObject = XLSX.utils.sheet_to_row_object_array(
+                  workbook.Sheets[sheet]);
+                jsonObject = JSON.stringify(rowObject);
+              });
+              return jsonObject;
+        }
+         
+
+        function updateElements(){
+          var sourceFileType = getSourceFileType() ;
+          var destinationFileType = getDestinationFileType() ;
+          document.getElementById("divTitulo").innerHTML = "Conversión de " +types[sourceFileType].name +" a " + types[destinationFileType].name;
+          document.getElementById("fileUpload").accept = types[sourceFileType].extension;
+        }
+        function getSourceFileType() {
+          console.log("Nuevo valor de sourceFileType: " + sourceFileType);
+          return  document.getElementById("sourceFileType").value;
+        }  
+        function getDestinationFileType() {
+          console.log("Nuevo valor de destinationFileType: " + destinationFileType);        
+          return  document.getElementById("destinationFileType").value;
+        }
+        function download(text, name, type) {
+            var a = document.createElement("a");
+            var file = new Blob([text], {type: type});
+            a.href = URL.createObjectURL(file);
+            a.download = name;
+            a.click();
+        }
+      </script>
+  </body>
+</html>
